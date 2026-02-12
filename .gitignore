@@ -1,0 +1,6 @@
+__pycache__/
+build/
+deploy/
+*.exe
+*.db
+config.json
