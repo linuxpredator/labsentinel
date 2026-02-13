@@ -10,7 +10,7 @@
 | **Server API** (`server.py`) | **Operational** | 16/16 PASS | Python Flask backend pada port 5000, multi-lab support |
 | **Setup Wizard** (`setup_wizard.py`) | **Operational** | PASS | Installer penuh: install ke `C:\Program Files\LabSentinel`, daftar Installed Apps, uninstall dilindungi password |
 | **Build System** (`build_app.bat`) | **Operational** | - | PyInstaller build script, menghasilkan .exe |
-| **Remote Access - PythonAnywhere** | **Operational** | PASS | `https://linuxpredator.pythonanywhere.com` — sentiasa online, tiada tunnel diperlukan |
+| **Remote Access - PythonAnywhere** | **Operational** | PASS | `https://labsentinel.xyz` — sentiasa online, tiada tunnel diperlukan |
 | **Remote Access - Cloudflare** | **Deprecated** | - | Named Tunnel `labsentinel` → `lab.labsentinel.xyz` — diganti PythonAnywhere (masalah 503 bila captive portal IT) |
 | **Admin Panel** (`/admin`) | **Operational** | PASS | **Dashboard PC** (grid visual per makmal) + **Log Pengguna** (jadual + filter + CSV export) + Remote commands (Shutdown/Restart/Lock/Unlock) |
 | **Auth System** (`admin_users`) | **Operational** | PASS | Superadmin + Pentadbir Makmal, login session-based, password hashed (Werkzeug), lab isolation, `verify_admin` API untuk client |
@@ -23,7 +23,7 @@
 | Item | Status | Detail |
 | :--- | :--- | :--- |
 | **PythonAnywhere Account** | **Active** | Username: `linuxpredator`, Free tier |
-| **Server URL** | **Live** | `https://linuxpredator.pythonanywhere.com` |
+| **Server URL** | **Live** | `https://labsentinel.xyz` |
 | **Python Version** | 3.9 | WSGI-based (tiada tunnel diperlukan) |
 | **WSGI Config** | **Configured** | `/var/www/linuxpredator_pythonanywhere_com_wsgi.py` → `from server import app` |
 | **Source Directory** | **Set** | `/home/linuxpredator/labsentinel/` |
@@ -37,7 +37,7 @@
     "lab_name": "General Lab",
     "pc_name": "PC-01",
     "admin_password": "<fallback offline sahaja>",
-    "server_url": "https://linuxpredator.pythonanywhere.com",
+    "server_url": "https://labsentinel.xyz",
     "auto_start": true
 }
 ```
@@ -128,7 +128,7 @@ Client admin_unlock() → POST /api.php?action=verify_admin
 | `deploy/LabSentinel/` | Output | **Up-to-date** | Pakej deployment: EXE + config.json + logo.png + logo.ico + INSTALL.txt |
 
 ## End-to-End Test Results (2026-02-12, PythonAnywhere Deployment)
-Ujian penuh client flow terhadap `https://linuxpredator.pythonanywhere.com`
+Ujian penuh client flow terhadap `https://labsentinel.xyz`
 
 | # | Ujian | Keputusan |
 | :--- | :--- | :--- |
@@ -239,13 +239,13 @@ Ujian penuh dijalankan melalui localhost + Named Tunnel `https://lab.labsentinel
 - [x] **Domain Purchased**: `labsentinel.xyz` dibeli via Shinjiru (RM6.90/tahun)
 - [x] **Named Cloudflare Tunnel**: URL tetap `lab.labsentinel.xyz` (Tunnel ID: e3992090-b77d-4b30-a943-fb74d7742a6b)
 - [x] **Deployment Package**: Folder `deploy/LabSentinel/` sedia untuk copy ke PC ujian
-- [x] **PythonAnywhere Deployment**: Server di-host ke cloud (`linuxpredator.pythonanywhere.com`) — sentiasa online, tiada bergantung pada tunnel/captive portal
+- [x] **PythonAnywhere Deployment**: Server di-host ke cloud (`labsentinel.xyz`) — sentiasa online, tiada bergantung pada tunnel/captive portal
 
 ## Architecture
 ```
                               INTERNET
                                  |
-              [linuxpredator.pythonanywhere.com]    <-- Sentiasa online (PythonAnywhere)
+              [labsentinel.xyz]    <-- Sentiasa online (PythonAnywhere)
                                  |
                         [PythonAnywhere WSGI]
                                  |
@@ -311,8 +311,8 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 2. Double-click `client.py` atau `dist/LabSentinel Client.exe`
 
 ### Remote/Multi-PC Setup
-1. Server sudah online di `https://linuxpredator.pythonanywhere.com` (tiada perlu jalankan apa-apa)
-2. Pastikan `config.json` pada setiap PC client ada `"server_url": "https://linuxpredator.pythonanywhere.com"`
+1. Server sudah online di `https://labsentinel.xyz` (tiada perlu jalankan apa-apa)
+2. Pastikan `config.json` pada setiap PC client ada `"server_url": "https://labsentinel.xyz"`
 3. Set `"lab_name"` mengikut makmal (contoh: "Lab Multimedia", "Lab Cyber Security")
 4. Jalankan client pada setiap PC
 
@@ -366,12 +366,12 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 | 2026-02-11 | **Database Reset**: 32 rekod test data dibuang. Dashboard bermula kosong — hanya papar data dari PC yang betul-betul register. |
 | 2026-02-11 | **Server + Tunnel dimulakan semula**: Flask server + Cloudflare tunnel aktif. Dashboard kosong disahkan berfungsi melalui tunnel. |
 | 2026-02-11 | **Local Client Test**: Client dilancarkan via `client.py` — register PASS, polling PASS, QR scan PASS, unlock PASS, admin panel PASS. |
-| 2026-02-12 | **PythonAnywhere Deployment**: Flask server di-deploy ke `linuxpredator.pythonanywhere.com` (free tier, Python 3.9). `server.py` dikemas kini — DB path auto-detect PythonAnywhere (`~/labsentinel_data/`). `wsgi.py` dibuat. WSGI config, source directory, force HTTPS dikonfigurasi via API. Semua endpoint diuji — `/test` OK, `/admin` 200, `/` homepage OK. `config.json` dikemas kini ke URL baru. Cloudflare Tunnel deprecated. |
+| 2026-02-12 | **PythonAnywhere Deployment**: Flask server di-deploy ke `labsentinel.xyz` (free tier, Python 3.9). `server.py` dikemas kini — DB path auto-detect PythonAnywhere (`~/labsentinel_data/`). `wsgi.py` dibuat. WSGI config, source directory, force HTTPS dikonfigurasi via API. Semua endpoint diuji — `/test` OK, `/admin` 200, `/` homepage OK. `config.json` dikemas kini ke URL baru. Cloudflare Tunnel deprecated. |
 | 2026-02-12 | **EXE Rebuild + Deploy Update**: PyInstaller 6.18.0, Python 3.14.2. Setup (19MB) + Client (23MB) rebuild dengan URL baru. Deploy package (`deploy/LabSentinel/` + `E:\Program\LabSentinel`) dikemas kini — config.json, INSTALL.txt, kedua-dua EXE. |
 | 2026-02-12 | **Phone QR Test PASS**: Unlock page dibuka dari phone (mobile data) → borang muncul → submit berjaya → "PC Berjaya Dibuka" → server confirm UNLOCKED. Full end-to-end 8/8 PASS. Masalah 503 selesai. |
 | 2026-02-12 | **Admin Auto-Refresh**: Admin dashboard (`/admin`) auto-refresh setiap 60 saat via `<meta http-equiv="refresh">`. Server.py dikemas kini dan di-upload + reload di PythonAnywhere. |
 | 2026-02-12 | **Icon Fix (EXE Bundle)**: `logo.ico` ditambah ke `--add-data` dalam build command untuk kedua-dua Setup dan Client EXE. Sebelum ini `logo.ico` hanya set sebagai `--icon` (ikon fail EXE di Explorer) tapi tak di-bundle dalam EXE, menyebabkan ikon bulu ayam Python muncul di title bar. `build_app.bat` dikemas kini. Kedua-dua EXE di-rebuild. |
-| 2026-02-12 | **Setup Wizard URL Fix**: `DEFAULT_SERVER_URL` dalam `setup_wizard.py` ditukar dari `https://lab.labsentinel.xyz` ke `https://linuxpredator.pythonanywhere.com`. |
+| 2026-02-12 | **Setup Wizard URL Fix**: `DEFAULT_SERVER_URL` dalam `setup_wizard.py` ditukar dari `https://lab.labsentinel.xyz` ke `https://labsentinel.xyz`. |
 | 2026-02-12 | **Icon Fix (EXE Bundle + Uninstall)**: `logo.ico` di-bundle dalam kedua-dua EXE via `--add-data`. Uninstall dialog icon diperbaiki — `iconbitmap(default=ico_path)` dipanggil sebelum `withdraw()` supaya child windows inherit ikon. `build_app.bat` dikemas kini. |
 | 2026-02-12 | **Taskkill on Uninstall**: `taskkill /F /IM "LabSentinel Client.exe"` ditambah sebelum padam fail semasa uninstall. Program kini berhenti sepenuhnya sebelum folder dipadam. |
 | 2026-02-12 | **Full Install/Uninstall Test PASS**: Setup wizard ikon OK, Installed Apps ikon OK, uninstall dialog ikon OK, taskkill berfungsi, folder dipadam bersih. |

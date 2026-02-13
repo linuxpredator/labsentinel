@@ -16,7 +16,7 @@ except:
     pass
 
 # --- CONFIGURATION DEFAULTS ---
-DEFAULT_SERVER_URL = "https://linuxpredator.pythonanywhere.com"
+DEFAULT_SERVER_URL = "https://labsentinel.xyz"
 CONFIG_FILE = "config.json"
 INSTALL_DIR = os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "LabSentinel")
 APP_VERSION = "1.0.0"
@@ -258,7 +258,7 @@ class SetupWizard(tk.Tk):
         ttk.Label(frame, text="Server URL:").grid(row=2, column=0, sticky="w", pady=5)
         ttk.Entry(frame, textvariable=self.config_data["server_url"], width=40).grid(row=3, column=0, sticky="w", pady=5)
 
-        help_text = "URL sudah ditetapkan: https://linuxpredator.pythonanywhere.com\nTukar hanya jika diarahkan oleh pentadbir."
+        help_text = "URL sudah ditetapkan: https://labsentinel.xyz\nTukar hanya jika diarahkan oleh pentadbir."
         ttk.Label(frame, text=help_text, font=("Arial", 8), foreground="gray", justify=tk.LEFT).grid(row=4, column=0, sticky="w")
 
         # Startup Option
