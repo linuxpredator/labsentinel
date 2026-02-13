@@ -1,13 +1,21 @@
 # server.py - LabSentinel Python Backend
 # Menggantikan PHP backend dengan Flask
 
-from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for, Response
+from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for, Response, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+
+# Lokasi fail logo
+LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logo.png')
+
+@app.route('/static/logo.png')
+def serve_logo():
+    """Serve logo sebagai static file"""
+    return send_file(LOGO_PATH, mimetype='image/png')
 app.secret_key = os.environ.get('SECRET_KEY', 'labsentinel-s3cret-key-2026')
 
 # Database path - detect PythonAnywhere environment
@@ -322,6 +330,7 @@ def unlock():
     </head>
     <body>
         <div class="card">
+            <img src="/static/logo.png" alt="LabSentinel" style="width: 60px; height: 60px; margin-bottom: 8px;">
             <h1>Sistem Lab Sentinel</h1>
             <p class="subtitle">Sila isi maklumat untuk menggunakan komputer</p>
 
@@ -439,6 +448,7 @@ def admin_login():
     </head>
     <body>
         <div class="card">
+            <img src="/static/logo.png" alt="LabSentinel" style="width: 70px; height: 70px; margin-bottom: 10px;">
             <h1>LabSentinel Admin</h1>
             <p class="subtitle">Sila log masuk untuk akses dashboard</p>
             {% if error %}
@@ -706,12 +716,17 @@ def admin():
                 </div>
             </div>
 
-            <h1>LabSentinel Admin</h1>
-            {% if admin_user.is_superadmin %}
-            <p class="subtitle">Sistem Pemantauan Makmal Komputer — Semua Makmal</p>
-            {% else %}
-            <p class="subtitle">Sistem Pemantauan Makmal Komputer — Makmal Seliaan Anda</p>
-            {% endif %}
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="/static/logo.png" alt="LabSentinel" style="width: 45px; height: 45px;">
+                <div>
+                    <h1 style="margin: 0;">LabSentinel Admin</h1>
+                    {% if admin_user.is_superadmin %}
+                    <p class="subtitle" style="margin: 0;">Sistem Pemantauan Makmal Komputer — Semua Makmal</p>
+                    {% else %}
+                    <p class="subtitle" style="margin: 0;">Sistem Pemantauan Makmal Komputer — Makmal Seliaan Anda</p>
+                    {% endif %}
+                </div>
+            </div>
 
             <!-- Tabs -->
             <div class="tabs">
@@ -1187,8 +1202,13 @@ def admin_users():
                 </div>
             </div>
 
-            <h1>Pengurusan Admin</h1>
-            <p class="subtitle">Tambah, padam dan urus akaun pentadbir makmal</p>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="/static/logo.png" alt="LabSentinel" style="width: 45px; height: 45px;">
+                <div>
+                    <h1 style="margin: 0;">Pengurusan Admin</h1>
+                    <p class="subtitle" style="margin: 0;">Tambah, padam dan urus akaun pentadbir makmal</p>
+                </div>
+            </div>
 
             {% if msg %}
             <div class="alert alert-success">{{ msg }}</div>
