@@ -16,7 +16,7 @@ except:
     pass
 
 # --- CONFIGURATION DEFAULTS ---
-DEFAULT_SERVER_URL = "https://lab.labsentinel.xyz"
+DEFAULT_SERVER_URL = "https://linuxpredator.pythonanywhere.com"
 CONFIG_FILE = "config.json"
 INSTALL_DIR = os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "LabSentinel")
 APP_VERSION = "1.0.0"
@@ -258,7 +258,7 @@ class SetupWizard(tk.Tk):
         ttk.Label(frame, text="Server URL:").grid(row=2, column=0, sticky="w", pady=5)
         ttk.Entry(frame, textvariable=self.config_data["server_url"], width=40).grid(row=3, column=0, sticky="w", pady=5)
 
-        help_text = "URL sudah ditetapkan: https://lab.labsentinel.xyz\nTukar hanya jika diarahkan oleh pentadbir."
+        help_text = "URL sudah ditetapkan: https://linuxpredator.pythonanywhere.com\nTukar hanya jika diarahkan oleh pentadbir."
         ttk.Label(frame, text=help_text, font=("Arial", 8), foreground="gray", justify=tk.LEFT).grid(row=4, column=0, sticky="w")
 
         # Startup Option
@@ -420,15 +420,16 @@ def run_uninstall():
     from tkinter import simpledialog, messagebox
 
     root = tk.Tk()
-    root.withdraw()
 
-    # Set icon
+    # Set icon SEBELUM withdraw supaya child windows inherit
     try:
         ico_path = os.path.join(INSTALL_DIR, "logo.ico")
         if os.path.exists(ico_path):
-            root.iconbitmap(ico_path)
+            root.iconbitmap(default=ico_path)
     except:
         pass
+
+    root.withdraw()
 
     # Baca password dari config.json
     config_path = os.path.join(INSTALL_DIR, CONFIG_FILE)
@@ -470,6 +471,13 @@ def run_uninstall():
         return
 
     try:
+        # 0. Bunuh LabSentinel Client jika sedang berjalan
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "LabSentinel Client.exe"],
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            capture_output=True
+        )
+
         # 1. Buang startup shortcut
         shortcut_path = os.path.join(
             os.getenv('APPDATA'), r'Microsoft\Windows\Start Menu\Programs\Startup', "LabSentinel.lnk"

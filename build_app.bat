@@ -38,11 +38,11 @@ python -c "from PIL import Image; img = Image.open('logo.png'); img.save('logo.i
 
 echo.
 echo [3/5] Building Installer (Setup Wizard)...
-python -m PyInstaller --noconfirm --onefile --windowed --icon=logo.ico --add-data "banner.png;." --add-data "logo.png;." --name "LabSentinel Setup" setup_wizard.py
+python -m PyInstaller --noconfirm --onefile --windowed --icon=logo.ico --add-data "banner.png;." --add-data "logo.png;." --add-data "logo.ico;." --name "LabSentinel Setup" setup_wizard.py
 
 echo.
 echo [4/5] Building Client (Lock Screen)...
-python -m PyInstaller --noconfirm --onefile --windowed --icon=logo.ico --add-data "logo.png;." --name "LabSentinel Client" client.py
+python -m PyInstaller --noconfirm --onefile --windowed --icon=logo.ico --add-data "logo.png;." --add-data "logo.ico;." --name "LabSentinel Client" client.py
 
 echo.
 echo [5/5] Cleaning up build files...

@@ -344,50 +344,156 @@ class LockScreenApp:
             self.root.after(1000, self.update_clock)
 
     def check_status_loop(self):
-        if self.is_unlocked: return
-
         def check_thread():
             try:
                 res = requests.get(f"{self.api_url}?action=check&uuid={self.session_uuid}", timeout=3)
                 if res.status_code == 200:
                     data = res.json()
-                    if data.get('status') == 'UNLOCKED':
-                        self.unlock_pc()
+                    command = data.get('command')
+                    if command:
+                        # Remote command dari admin — dispatch
+                        self.root.after(0, lambda: self.handle_remote_command(command))
+                    elif not self.is_unlocked and data.get('status') == 'UNLOCKED':
+                        # QR unlock biasa
+                        self.root.after(0, self.unlock_pc)
                     # Reset fail count on success
                     if self.fail_count > 0:
-                        self.fail_count = 0 
+                        self.fail_count = 0
             except Exception as e:
                 self.fail_count += 1
                 print(f"Connection failed: {e}")
-                if self.fail_count >= 5: # Limit increased to 5
+                if self.fail_count >= 5:
                      self.root.after(0, self.set_offline_mode)
 
         threading.Thread(target=check_thread, daemon=True).start()
         self.root.after(2000, self.check_status_loop)
 
+    def handle_remote_command(self, command):
+        """Proses arahan jauh dari admin dashboard"""
+        command = command.upper()
+        print(f"[REMOTE CMD] Received: {command}")
+
+        if command == 'SHUTDOWN':
+            self.remote_shutdown()
+        elif command == 'RESTART':
+            self.remote_restart()
+        elif command == 'LOCK':
+            if self.is_unlocked:
+                self.lock_pc()
+        elif command == 'UNLOCK':
+            if not self.is_unlocked:
+                self.unlock_pc(admin=True)
+
+    def remote_shutdown(self):
+        """Shutdown PC dengan amaran 30 saat"""
+        self.shutdown_remaining = 30
+        self._shutdown_mode = 'shutdown'
+
+        # Buat popup amaran
+        self.shutdown_win = tk.Toplevel(self.root)
+        self.shutdown_win.title("AMARAN SHUTDOWN")
+        self.shutdown_win.attributes("-topmost", True)
+        self.shutdown_win.resizable(False, False)
+        self.shutdown_win.geometry("420x200")
+        self.shutdown_win.configure(bg="#1c1c1c")
+        self.shutdown_win.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        tk.Label(self.shutdown_win, text="AMARAN: PC akan SHUTDOWN", font=("Segoe UI", 16, "bold"),
+                 fg="#ef4444", bg="#1c1c1c").pack(pady=(20, 5))
+        tk.Label(self.shutdown_win, text="Arahan dari Admin. Sila simpan kerja anda.",
+                 font=("Segoe UI", 11), fg="#ccc", bg="#1c1c1c").pack()
+
+        self.shutdown_timer_label = tk.Label(self.shutdown_win, text="30", font=("Consolas", 36, "bold"),
+                                              fg="#ef4444", bg="#1c1c1c")
+        self.shutdown_timer_label.pack(pady=10)
+
+        self._shutdown_countdown()
+
+    def remote_restart(self):
+        """Restart PC dengan amaran 30 saat"""
+        self.shutdown_remaining = 30
+        self._shutdown_mode = 'restart'
+
+        self.shutdown_win = tk.Toplevel(self.root)
+        self.shutdown_win.title("AMARAN RESTART")
+        self.shutdown_win.attributes("-topmost", True)
+        self.shutdown_win.resizable(False, False)
+        self.shutdown_win.geometry("420x200")
+        self.shutdown_win.configure(bg="#1c1c1c")
+        self.shutdown_win.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        tk.Label(self.shutdown_win, text="AMARAN: PC akan RESTART", font=("Segoe UI", 16, "bold"),
+                 fg="#f59e0b", bg="#1c1c1c").pack(pady=(20, 5))
+        tk.Label(self.shutdown_win, text="Arahan dari Admin. Sila simpan kerja anda.",
+                 font=("Segoe UI", 11), fg="#ccc", bg="#1c1c1c").pack()
+
+        self.shutdown_timer_label = tk.Label(self.shutdown_win, text="30", font=("Consolas", 36, "bold"),
+                                              fg="#f59e0b", bg="#1c1c1c")
+        self.shutdown_timer_label.pack(pady=10)
+
+        self._shutdown_countdown()
+
+    def _shutdown_countdown(self):
+        """Countdown untuk remote shutdown/restart"""
+        if self.shutdown_remaining > 0:
+            self.shutdown_timer_label.config(text=str(self.shutdown_remaining))
+            self.shutdown_remaining -= 1
+            self.root.after(1000, self._shutdown_countdown)
+        else:
+            try:
+                self.shutdown_win.destroy()
+            except:
+                pass
+            if getattr(self, '_shutdown_mode', '') == 'restart':
+                subprocess.run(['shutdown', '/r', '/t', '0'], creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                subprocess.run(['shutdown', '/s', '/t', '0'], creationflags=subprocess.CREATE_NO_WINDOW)
+
+    def verify_admin_password(self, password):
+        """Sahkan password admin melalui server. Fallback ke config jika offline."""
+        try:
+            response = requests.post(
+                f"{self.server_url}/api.php?action=verify_admin",
+                data={'password': password, 'lab_name': self.lab_name},
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('verified', False)
+        except Exception:
+            pass
+        # Fallback: password lokal dari config (offline sahaja)
+        return password == self.admin_password
+
     def open_admin_panel(self):
         """Buka Admin Panel di browser (perlu password)"""
         pwd = simpledialog.askstring("Admin Panel", "Masukkan Admin Password:", show="*", parent=self.root)
-        if pwd == self.admin_password:
+        if pwd is None:
+            return
+        if self.verify_admin_password(pwd):
             import webbrowser
             webbrowser.open(f"{self.server_url}/admin")
-        elif pwd is not None:
+        else:
             messagebox.showerror("Error", "Password salah.")
 
     def open_settings(self):
         """Buka config.json untuk edit settings (perlu password)"""
         pwd = simpledialog.askstring("Settings", "Masukkan Admin Password:", show="*", parent=self.root)
-        if pwd == self.admin_password:
+        if pwd is None:
+            return
+        if self.verify_admin_password(pwd):
             config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), CONFIG_FILE)
             os.startfile(config_path)
-        elif pwd is not None:
+        else:
             messagebox.showerror("Error", "Password salah.")
 
     def admin_unlock(self, event=None):
         pwd = simpledialog.askstring("Admin Unlock", "Enter Admin Password:", show="*", parent=self.root)
-        if pwd == self.admin_password:
+        if pwd is None:
+            return
+        if self.verify_admin_password(pwd):
             self.unlock_pc(admin=True)
-        elif pwd is not None:
+        else:
             messagebox.showerror("Error", "Incorrect Password")
 
     def unlock_pc(self, admin=False):
@@ -512,7 +618,6 @@ class LockScreenApp:
 
         # Daftar sesi baru
         self.register_session()
-        self.check_status_loop()
         self.update_clock()
 
 if __name__ == "__main__":
