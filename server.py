@@ -330,7 +330,7 @@ def unlock():
     </head>
     <body>
         <div class="card">
-            <img src="/static/logo.png" alt="LabSentinel" style="width: 60px; height: 60px; margin-bottom: 8px;">
+            <img src="/static/logo.png" alt="LabSentinel" style="width: 120px; height: 120px; margin-bottom: 10px;">
             <h1>Sistem Lab Sentinel</h1>
             <p class="subtitle">Sila isi maklumat untuk menggunakan komputer</p>
 
@@ -448,7 +448,7 @@ def admin_login():
     </head>
     <body>
         <div class="card">
-            <img src="/static/logo.png" alt="LabSentinel" style="width: 70px; height: 70px; margin-bottom: 10px;">
+            <img src="/static/logo.png" alt="LabSentinel" style="width: 120px; height: 120px; margin-bottom: 10px;">
             <h1>LabSentinel Admin</h1>
             <p class="subtitle">Sila log masuk untuk akses dashboard</p>
             {% if error %}
@@ -717,7 +717,7 @@ def admin():
             </div>
 
             <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="/static/logo.png" alt="LabSentinel" style="width: 45px; height: 45px;">
+                <img src="/static/logo.png" alt="LabSentinel" style="width: 60px; height: 60px;">
                 <div>
                     <h1 style="margin: 0;">LabSentinel Admin</h1>
                     {% if admin_user.is_superadmin %}
@@ -1203,7 +1203,7 @@ def admin_users():
             </div>
 
             <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="/static/logo.png" alt="LabSentinel" style="width: 45px; height: 45px;">
+                <img src="/static/logo.png" alt="LabSentinel" style="width: 60px; height: 60px;">
                 <div>
                     <h1 style="margin: 0;">Pengurusan Admin</h1>
                     <p class="subtitle" style="margin: 0;">Tambah, padam dan urus akaun pentadbir makmal</p>
