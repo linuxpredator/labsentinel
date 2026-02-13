@@ -10,7 +10,7 @@
 | **Server API** (`server.py`) | **Operational** | 16/16 PASS | Python Flask backend pada port 5000, multi-lab support |
 | **Setup Wizard** (`setup_wizard.py`) | **Operational** | PASS | Installer penuh: install ke `C:\Program Files\LabSentinel`, daftar Installed Apps, uninstall dilindungi password |
 | **Build System** (`build_app.bat`) | **Operational** | - | PyInstaller build script, menghasilkan .exe |
-| **Remote Access - PythonAnywhere** | **Operational** | PASS | `https://labsentinel.xyz` — sentiasa online, tiada tunnel diperlukan |
+| **Remote Access - PythonAnywhere** | **Operational** | PASS | `https://labsentinel.xyz` — paid plan ($10/bulan), custom domain, Let's Encrypt SSL, sentiasa online |
 | **Remote Access - Cloudflare** | **Deprecated** | - | Named Tunnel `labsentinel` → `lab.labsentinel.xyz` — diganti PythonAnywhere (masalah 503 bila captive portal IT) |
 | **Admin Panel** (`/admin`) | **Operational** | PASS | **Dashboard PC** (grid visual per makmal) + **Log Pengguna** (jadual + filter + CSV export) + Remote commands (Shutdown/Restart/Lock/Unlock) |
 | **Auth System** (`admin_users`) | **Operational** | PASS | Superadmin + Pentadbir Makmal, login session-based, password hashed (Werkzeug), lab isolation, `verify_admin` API untuk client |
@@ -23,8 +23,10 @@
 | Item | Status | Detail |
 | :--- | :--- | :--- |
 | **PythonAnywhere Account** | **Active** | Username: `linuxpredator`, Free tier |
-| **Server URL** | **Live** | `https://labsentinel.xyz` |
+| **Server URL** | **Live** | `https://labsentinel.xyz` (custom domain) |
+| **Plan** | **Paid** | $10/bulan — custom domain, 5000s CPU, 3 workers, tiada expiry |
 | **Python Version** | 3.9 | WSGI-based (tiada tunnel diperlukan) |
+| **SSL** | **Active** | Let's Encrypt auto-renew (valid hingga May 2026) |
 | **WSGI Config** | **Configured** | `/var/www/linuxpredator_pythonanywhere_com_wsgi.py` → `from server import app` |
 | **Source Directory** | **Set** | `/home/linuxpredator/labsentinel/` |
 | **Database** | **Auto-created** | `~/labsentinel_data/lab_system.db` (writable directory) |
@@ -382,6 +384,9 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 
 | 2026-02-13 | **Server-Side Admin Verification**: Endpoint baru `verify_admin` ditambah dalam `server.py`. Client (`client.py`) kini sahkan password admin melalui server (`admin_users` DB, hashed) — bukan lagi plaintext dari `config.json`. Fallback ke config hanya bila server tidak boleh dicapai (offline). Fungsi `verify_admin_password()` ditambah, digunakan oleh `admin_unlock()`, `open_admin_panel()`, `open_settings()`. |
 | 2026-02-13 | **Admin Dashboard Role-Based UI**: Admin bar dikemas kini — Superadmin nampak badge "Superadmin" + butang "Urus Admin". Pentadbir Makmal nampak badge "Pentadbir Makmal" + senarai makmal seliaan. Subtitle bertukar mengikut peranan. Mesej khas jika admin tiada makmal ditugaskan. |
+| 2026-02-13 | **Delete Lab Feature**: Superadmin boleh buang makmal dari halaman Urus Admin. Padam semua sesi + bersihkan assigned_labs admin. Dialog pengesahan dengan amaran kekal. Statistik PC dan rekod dipaparkan. |
+| 2026-02-13 | **Domain Migration**: `linuxpredator.pythonanywhere.com` → `labsentinel.xyz`. PythonAnywhere paid plan ($10/bulan). DNS CNAME via Cloudflare (DNS only). Let's Encrypt SSL auto-renew. Semua URL dalam kod dikemas kini. |
+| 2026-02-13 | **Logo pada Web Pages**: Route `/static/logo.png` ditambah. Logo LabSentinel dipaparkan di halaman login, unlock (borang pengguna), admin dashboard, dan halaman urus admin. |
 
 ## Next Steps
 1. **Upload `server.py` ke PythonAnywhere** — `verify_admin` endpoint + admin dashboard UI baru. Reload web app.
