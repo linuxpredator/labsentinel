@@ -1,5 +1,5 @@
 # LabSentinel Project Status
-**Last Updated**: 2026-02-13 (Setup Wizard Python Prerequisite Check)
+**Last Updated**: 2026-02-13 (Fix auto-lock countdown + Setup Wizard Python Prerequisite Check)
 
 ## Current Phase: TESTING & DEPLOYMENT
 
@@ -189,7 +189,7 @@ Ujian penuh dijalankan melalui localhost + Named Tunnel `https://lab.labsentinel
 - [x] Borang validation menolak input tidak sah (3 kes diuji: nama kosong, ID salah, telefon salah)
 - [x] Unlock berjaya selepas isi borang (diuji via API, status UNLOCKED disahkan)
 - [x] Countdown timer berjalan di unlock view (window kecil 420x280)
-- [ ] Auto-lock apabila masa tamat (QR baru dijana + matrix rain restart)
+- [x] Auto-lock apabila masa tamat (QR baru dijana + matrix rain restart) — Fixed: timestamp-based + watchdog
 - [x] Admin unlock berfungsi (Ctrl+Alt+L / Escape / butang — password protected)
 - [x] Unlock view bersih: hanya ACCESS GRANTED + countdown + butang Admin Panel & Settings
 - [x] Admin Panel dilindungi password dari client app
@@ -328,6 +328,7 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 - ~~URL Cloudflare Tunnel berubah setiap kali dimulakan semula~~ → Diselesaikan dengan Named Tunnel (`lab.labsentinel.xyz`)
 - ~~503 bila captive portal IT belum login~~ → Diselesaikan dengan PythonAnywhere (server di cloud, tiada tunnel)
 - ~~Admin password disimpan dalam plaintext di `config.json`~~ → Diselesaikan: password kini disahkan melalui server (`admin_users` DB, hashed). `config.json` hanya fallback offline.
+- ~~Auto-lock tidak berfungsi pada sesetengah PC~~ → Diselesaikan: countdown ditukar ke timestamp-based + watchdog failsafe
 - QR code dijana semula setiap saat (boleh dioptimumkan)
 - Matrix rain menggunakan tkinter Canvas -- prestasi bergantung pada spesifikasi PC
 - ~~PythonAnywhere free tier perlu reload setiap 3 bulan~~ → Diselesaikan: paid plan ($10/bulan), tiada expiry
@@ -390,6 +391,7 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 | 2026-02-13 | **Logo pada Web Pages**: Route `/static/logo.png` ditambah. Logo LabSentinel dipaparkan di halaman login, unlock (borang pengguna), admin dashboard, dan halaman urus admin. |
 | 2026-02-13 | **EXE Rebuild + Final Deploy**: Kedua-dua EXE di-rebuild dengan semua perubahan terkini (server-side admin verify, role-based UI, delete lab, domain migration, logo). Pakej lengkap (7 fail) disalin ke `E:\Program\LabSentinel` untuk deploy manual. |
 | 2026-02-13 | **Setup Wizard Python Prerequisite Check**: Welcome step kini semak Python dan library (`requests`, `qrcode`, `pillow`) sebelum pemasangan. Papar status [OK]/[X] untuk setiap keperluan. Jika Python tiada, tunjuk amaran jelas dengan arahan install. Jika library tak cukup, tunjuk arahan `pip install`. Jika semua OK, papar mesej hijau. Bezakan nasihat antara mod EXE (Python optional tapi disyorkan) dan mod skrip (Python wajib). |
+| 2026-02-13 | **Fix Auto-Lock Countdown**: Countdown ditukar dari counter-based (`remaining_time -= 1`) ke **timestamp-based** (`time.time() - unlock_timestamp`). Tahan PC sleep/hibernate — masa dikira dari jam sebenar. Tambah **try-except** supaya chain `after()` tak putus jika berlaku exception. Tambah **watchdog** dalam `check_status_loop()` sebagai failsafe — semak session expired setiap 2 saat secara bebas dari countdown. |
 
 ## Next Steps
 1. ~~**Upload `server.py` ke PythonAnywhere**~~ — DONE (2026-02-13)

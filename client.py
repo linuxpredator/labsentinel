@@ -344,6 +344,15 @@ class LockScreenApp:
             self.root.after(1000, self.update_clock)
 
     def check_status_loop(self):
+        # Watchdog: semak session expired sebagai failsafe
+        # (jika countdown chain putus kerana exception/sleep/hibernate)
+        if self.is_unlocked and hasattr(self, 'unlock_timestamp'):
+            elapsed = time.time() - self.unlock_timestamp
+            if elapsed >= SESSION_TIME_LIMIT:
+                print(f"[WATCHDOG] Session expired (elapsed={elapsed:.0f}s). Locking PC.")
+                self.lock_pc()
+                return
+
         def check_thread():
             try:
                 res = requests.get(f"{self.api_url}?action=check&uuid={self.session_uuid}", timeout=3)
@@ -498,6 +507,7 @@ class LockScreenApp:
 
     def unlock_pc(self, admin=False):
         self.is_unlocked = True
+        self.unlock_timestamp = time.time()  # Rekod masa sebenar unlock
         self.stop_matrix_rain()
         self.root.config(cursor="arrow")
         self.root.attributes("-fullscreen", False)
@@ -549,31 +559,45 @@ class LockScreenApp:
         self.update_countdown()
 
     def update_countdown(self):
-        """Kemas kini countdown setiap saat"""
-        if self.remaining_time > 0:
-            hours = self.remaining_time // 3600
-            minutes = (self.remaining_time % 3600) // 60
-            seconds = self.remaining_time % 60
+        """Kemas kini countdown setiap saat (timestamp-based)"""
+        try:
+            # Henti jika sudah dikunci
+            if not self.is_unlocked:
+                return
 
-            time_str = f"⏱ {hours:02d}:{minutes:02d}:{seconds:02d}"
+            # Kira masa berbaki dari timestamp sebenar (tahan sleep/hibernate)
+            elapsed = time.time() - self.unlock_timestamp
+            self.remaining_time = max(0, SESSION_TIME_LIMIT - int(elapsed))
 
-            # Tukar warna berdasarkan masa berbaki
-            if self.remaining_time <= 300:  # 5 minit terakhir - merah
-                color = "#ef4444"
-            elif self.remaining_time <= 900:  # 15 minit terakhir - oren
-                color = "#f59e0b"
-            else:  # Masa masih banyak - hijau
-                color = "#22c55e"
+            if self.remaining_time > 0:
+                hours = self.remaining_time // 3600
+                minutes = (self.remaining_time % 3600) // 60
+                seconds = self.remaining_time % 60
 
-            self.countdown_label.config(text=time_str, fg=color)
-            if hasattr(self, 'unlock_countdown'):
-                self.unlock_countdown.config(text=time_str, fg=color)
+                time_str = f"\u23f1 {hours:02d}:{minutes:02d}:{seconds:02d}"
 
-            self.remaining_time -= 1
-            self.root.after(1000, self.update_countdown)
-        else:
-            # Masa tamat - kunci semula PC
-            self.lock_pc()
+                # Tukar warna berdasarkan masa berbaki
+                if self.remaining_time <= 300:  # 5 minit terakhir - merah
+                    color = "#ef4444"
+                elif self.remaining_time <= 900:  # 15 minit terakhir - oren
+                    color = "#f59e0b"
+                else:  # Masa masih banyak - hijau
+                    color = "#22c55e"
+
+                self.countdown_label.config(text=time_str, fg=color)
+                if hasattr(self, 'unlock_countdown'):
+                    self.unlock_countdown.config(text=time_str, fg=color)
+
+                self.root.after(1000, self.update_countdown)
+            else:
+                # Masa tamat - kunci semula PC
+                print(f"[COUNTDOWN] Session time limit reached. Locking PC.")
+                self.lock_pc()
+        except Exception as e:
+            # Jangan putuskan chain — log error dan cuba semula
+            print(f"[COUNTDOWN] Error: {e}")
+            if self.is_unlocked:
+                self.root.after(1000, self.update_countdown)
 
     def lock_pc(self):
         """Kunci PC apabila masa tamat"""
