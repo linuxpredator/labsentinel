@@ -14,7 +14,7 @@
 | **Remote Access - Cloudflare** | **Deprecated** | - | Named Tunnel `labsentinel` → `lab.labsentinel.xyz` — diganti PythonAnywhere (masalah 503 bila captive portal IT) |
 | **Admin Panel** (`/admin`) | **Operational** | PASS | **Dashboard PC** (grid visual per makmal) + **Log Pengguna** (jadual + filter + CSV export) + Remote commands (Shutdown/Restart/Lock/Unlock) |
 | **Auth System** (`admin_users`) | **Operational** | PASS | Superadmin + Pentadbir Makmal, login session-based, password hashed (Werkzeug), lab isolation, `verify_admin` API untuk client |
-| **Built Executables** (`dist/`) | **Up-to-date** | - | Rebuild 2026-02-13: Setup (19MB) + Client (23MB) — logo.ico bundled, URL `labsentinel.xyz`, server-side admin verify |
+| **Built Executables** (`dist/`) | **Up-to-date** | - | Rebuild 2026-02-13 15:43: Setup (19MB) + Client (23MB) — semua fix terkini: timestamp-based auto-lock, watchdog, Python prereq check, URL `labsentinel.xyz` |
 | **Deployment Package** (`deploy/`) | **Up-to-date** | - | Folder siap copy: EXE + config + logo + logo.ico + banner.png + INSTALL.txt |
 | **Deploy Location** (`E:\Program\LabSentinel`) | **Copied** | - | Pakej lengkap disalin ke E:\Program untuk deploy manual ke PC makmal. URL dikemas kini ke `labsentinel.xyz`. |
 | **Database** (`lab_system.db`) | **Clean** | - | Test data dibuang — dashboard bermula kosong, data masuk mengikut PC yang register |
