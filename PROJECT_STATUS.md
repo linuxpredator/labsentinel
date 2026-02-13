@@ -1,5 +1,5 @@
 # LabSentinel Project Status
-**Last Updated**: 2026-02-13 (Admin Auth System — Superadmin/Pentadbir Makmal + Server-Side Verification)
+**Last Updated**: 2026-02-13 (Setup Wizard Python Prerequisite Check)
 
 ## Current Phase: TESTING & DEPLOYMENT
 
@@ -242,6 +242,7 @@ Ujian penuh dijalankan melalui localhost + Named Tunnel `https://lab.labsentinel
 - [x] **Named Cloudflare Tunnel**: URL tetap `lab.labsentinel.xyz` (Tunnel ID: e3992090-b77d-4b30-a943-fb74d7742a6b)
 - [x] **Deployment Package**: Folder `deploy/LabSentinel/` sedia untuk copy ke PC ujian
 - [x] **PythonAnywhere Deployment**: Server di-host ke cloud (`labsentinel.xyz`) — sentiasa online, tiada bergantung pada tunnel/captive portal
+- [x] **Setup Wizard Prerequisite Check**: Semakan automatik Python + library pada welcome step. Nasihat install jelas jika keperluan tidak dipenuhi.
 
 ## Architecture
 ```
@@ -388,6 +389,7 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 | 2026-02-13 | **Domain Migration**: `linuxpredator.pythonanywhere.com` → `labsentinel.xyz`. PythonAnywhere paid plan ($10/bulan). DNS CNAME via Cloudflare (DNS only). Let's Encrypt SSL auto-renew. Semua URL dalam kod dikemas kini. |
 | 2026-02-13 | **Logo pada Web Pages**: Route `/static/logo.png` ditambah. Logo LabSentinel dipaparkan di halaman login, unlock (borang pengguna), admin dashboard, dan halaman urus admin. |
 | 2026-02-13 | **EXE Rebuild + Final Deploy**: Kedua-dua EXE di-rebuild dengan semua perubahan terkini (server-side admin verify, role-based UI, delete lab, domain migration, logo). Pakej lengkap (7 fail) disalin ke `E:\Program\LabSentinel` untuk deploy manual. |
+| 2026-02-13 | **Setup Wizard Python Prerequisite Check**: Welcome step kini semak Python dan library (`requests`, `qrcode`, `pillow`) sebelum pemasangan. Papar status [OK]/[X] untuk setiap keperluan. Jika Python tiada, tunjuk amaran jelas dengan arahan install. Jika library tak cukup, tunjuk arahan `pip install`. Jika semua OK, papar mesej hijau. Bezakan nasihat antara mod EXE (Python optional tapi disyorkan) dan mod skrip (Python wajib). |
 
 ## Next Steps
 1. ~~**Upload `server.py` ke PythonAnywhere**~~ — DONE (2026-02-13)

@@ -218,17 +218,157 @@ class SetupWizard(tk.Tk):
 
     # --- STEPS ---
 
+    def check_system_requirements(self):
+        """Semak Python dan library yang diperlukan pada sistem"""
+        results = {}
+
+        # 1. Semak Python
+        is_exe = getattr(sys, 'frozen', False)
+        python_found = False
+        python_version = ""
+        try:
+            proc = subprocess.run(
+                ["python", "--version"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            output = (proc.stdout + proc.stderr).strip()
+            if "Python" in output and "not found" not in output.lower():
+                python_found = True
+                python_version = output
+        except Exception:
+            pass
+
+        # Fallback: cuba py launcher
+        if not python_found:
+            try:
+                proc = subprocess.run(
+                    ["py", "--version"],
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                output = (proc.stdout + proc.stderr).strip()
+                if "Python" in output:
+                    python_found = True
+                    python_version = output
+            except Exception:
+                pass
+
+        results['python'] = {'found': python_found, 'version': python_version}
+        results['is_exe'] = is_exe
+
+        # 2. Semak library (hanya jika Python dijumpai)
+        libs = {'requests': False, 'qrcode': False, 'pillow (PIL)': False}
+        if python_found:
+            for lib, import_name in [('requests', 'requests'), ('qrcode', 'qrcode'), ('pillow (PIL)', 'PIL')]:
+                try:
+                    proc = subprocess.run(
+                        ["python", "-c", f"import {import_name}; print('OK')"],
+                        capture_output=True, text=True, timeout=5,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    if "OK" in proc.stdout:
+                        libs[lib] = True
+                except Exception:
+                    pass
+        results['libs'] = libs
+
+        return results
+
     def create_welcome_step(self):
         header = ttk.Label(self.main_area, text="Welcome to LabSentinel Setup", style="Header.TLabel")
-        header.pack(anchor="w", pady=(10, 20))
+        header.pack(anchor="w", pady=(10, 5))
 
-        desc = ttk.Label(self.main_area, text="This wizard will install LabSentinel and configure\nit for this workstation.\n\nPlease ensure you have your Lab Name and PC ID ready.", wraplength=400)
-        desc.pack(anchor="w", pady=10)
+        desc = ttk.Label(self.main_area, text="This wizard will install LabSentinel and configure\nit for this workstation.", wraplength=400)
+        desc.pack(anchor="w", pady=(0, 10))
+
+        # --- System Requirements Check ---
+        req_frame = tk.LabelFrame(self.main_area, text="  System Requirements  ", font=("Segoe UI", 10, "bold"),
+                                   bg="white", fg="#1a3a6e", padx=15, pady=10)
+        req_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # Run check
+        reqs = self.check_system_requirements()
+
+        # Python status
+        if reqs['python']['found']:
+            py_icon = "OK"
+            py_color = "#16a34a"
+            py_text = f"Python — {reqs['python']['version']}"
+        else:
+            py_icon = "X"
+            py_color = "#dc2626"
+            py_text = "Python — Tidak dijumpai"
+
+        py_row = tk.Frame(req_frame, bg="white")
+        py_row.pack(fill=tk.X, pady=2)
+        tk.Label(py_row, text=f"[{py_icon}]", font=("Consolas", 10, "bold"), fg=py_color, bg="white", width=4, anchor="w").pack(side=tk.LEFT)
+        tk.Label(py_row, text=py_text, font=("Segoe UI", 10), bg="white", fg="#333").pack(side=tk.LEFT)
+
+        # Library status (hanya jika Python ada)
+        if reqs['python']['found']:
+            for lib_name, installed in reqs['libs'].items():
+                lib_row = tk.Frame(req_frame, bg="white")
+                lib_row.pack(fill=tk.X, pady=1)
+                icon = "OK" if installed else "X"
+                color = "#16a34a" if installed else "#dc2626"
+                tk.Label(lib_row, text=f"[{icon}]", font=("Consolas", 10, "bold"), fg=color, bg="white", width=4, anchor="w").pack(side=tk.LEFT)
+                status_text = lib_name if installed else f"{lib_name} — Tidak dipasang"
+                tk.Label(lib_row, text=f"  {status_text}", font=("Segoe UI", 9), bg="white", fg="#555").pack(side=tk.LEFT)
+
+        # Advisory message
+        all_libs_ok = all(reqs['libs'].values()) if reqs['python']['found'] else False
+
+        if not reqs['python']['found']:
+            # Python tidak dijumpai
+            warn_frame = tk.Frame(req_frame, bg="#fef2f2", highlightbackground="#fecaca", highlightthickness=1)
+            warn_frame.pack(fill=tk.X, pady=(10, 0))
+
+            if reqs['is_exe']:
+                warn_msg = (
+                    "AMARAN: Python tidak dipasang pada PC ini.\n"
+                    "LabSentinel Client.exe boleh berjalan tanpa Python, tetapi\n"
+                    "jika berlaku masalah, Python diperlukan untuk diagnosis.\n\n"
+                    "Disyorkan: Pasang Python dari python.org\n"
+                    "Pastikan tick 'Add Python to PATH' semasa install."
+                )
+            else:
+                warn_msg = (
+                    "AMARAN: Python tidak dipasang pada PC ini.\n"
+                    "LabSentinel Client TIDAK boleh berjalan tanpa Python.\n\n"
+                    "Sila pasang Python terlebih dahulu:\n"
+                    "1. Muat turun dari https://python.org/downloads\n"
+                    "2. PASTIKAN tick 'Add Python to PATH'\n"
+                    "3. Selepas install, buka PowerShell baru dan jalankan:\n"
+                    "   pip install requests qrcode pillow"
+                )
+            tk.Label(warn_frame, text=warn_msg, font=("Segoe UI", 9), bg="#fef2f2", fg="#991b1b",
+                     justify=tk.LEFT, padx=10, pady=8, wraplength=400).pack(anchor="w")
+
+        elif not all_libs_ok:
+            # Python ada tapi library tak cukup
+            missing = [lib for lib, ok in reqs['libs'].items() if not ok]
+            warn_frame = tk.Frame(req_frame, bg="#fffbeb", highlightbackground="#fef08a", highlightthickness=1)
+            warn_frame.pack(fill=tk.X, pady=(10, 0))
+            pip_libs = " ".join([("pillow" if "pillow" in m else m) for m in missing])
+            warn_msg = (
+                f"Library berikut belum dipasang: {', '.join(missing)}\n"
+                f"Buka PowerShell dan jalankan:\n"
+                f"  pip install {pip_libs}"
+            )
+            tk.Label(warn_frame, text=warn_msg, font=("Segoe UI", 9), bg="#fffbeb", fg="#92400e",
+                     justify=tk.LEFT, padx=10, pady=8).pack(anchor="w")
+        else:
+            # Semua OK
+            ok_frame = tk.Frame(req_frame, bg="#f0fdf4", highlightbackground="#bbf7d0", highlightthickness=1)
+            ok_frame.pack(fill=tk.X, pady=(10, 0))
+            tk.Label(ok_frame, text="Semua keperluan sistem dipenuhi.", font=("Segoe UI", 9, "bold"),
+                     bg="#f0fdf4", fg="#16a34a", padx=10, pady=6).pack(anchor="w")
 
         install_info = f"Lokasi pemasangan: {INSTALL_DIR}"
-        ttk.Label(self.main_area, text=install_info, font=("Consolas", 9), foreground="#1a3a6e").pack(anchor="w", pady=5)
+        ttk.Label(self.main_area, text=install_info, font=("Consolas", 9), foreground="#1a3a6e").pack(anchor="w", pady=(10, 0))
 
-        ttk.Label(self.main_area, text="Click Next to continue.").pack(anchor="w", pady=20)
+        ttk.Label(self.main_area, text="Click Next to continue.").pack(anchor="w", pady=(5, 0))
 
     def create_details_step(self):
         header = ttk.Label(self.main_area, text="Maklumat Workstation", style="Header.TLabel")
