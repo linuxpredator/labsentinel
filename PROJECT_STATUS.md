@@ -1,5 +1,5 @@
 # LabSentinel Project Status
-**Last Updated**: 2026-02-13 (Fix auto-lock countdown + Setup Wizard Python Prerequisite Check)
+**Last Updated**: 2026-02-13 (Setup Wizard auto-download Python + Fix auto-lock countdown)
 
 ## Current Phase: TESTING & DEPLOYMENT
 
@@ -14,7 +14,7 @@
 | **Remote Access - Cloudflare** | **Deprecated** | - | Named Tunnel `labsentinel` → `lab.labsentinel.xyz` — diganti PythonAnywhere (masalah 503 bila captive portal IT) |
 | **Admin Panel** (`/admin`) | **Operational** | PASS | **Dashboard PC** (grid visual per makmal) + **Log Pengguna** (jadual + filter + CSV export) + Remote commands (Shutdown/Restart/Lock/Unlock) |
 | **Auth System** (`admin_users`) | **Operational** | PASS | Superadmin + Pentadbir Makmal, login session-based, password hashed (Werkzeug), lab isolation, `verify_admin` API untuk client |
-| **Built Executables** (`dist/`) | **Up-to-date** | - | Rebuild 2026-02-13 15:43: Setup (19MB) + Client (23MB) — semua fix terkini: timestamp-based auto-lock, watchdog, Python prereq check, URL `labsentinel.xyz` |
+| **Built Executables** (`dist/`) | **Up-to-date** | - | Rebuild 2026-02-13 16:00: Setup (19MB) + Client (23MB) — auto-download Python, timestamp-based auto-lock, watchdog, URL `labsentinel.xyz` |
 | **Deployment Package** (`deploy/`) | **Up-to-date** | - | Folder siap copy: EXE + config + logo + logo.ico + banner.png + INSTALL.txt |
 | **Deploy Location** (`E:\Program\LabSentinel`) | **Copied** | - | Pakej lengkap disalin ke E:\Program untuk deploy manual ke PC makmal. URL dikemas kini ke `labsentinel.xyz`. |
 | **Database** (`lab_system.db`) | **Clean** | - | Test data dibuang — dashboard bermula kosong, data masuk mengikut PC yang register |
@@ -242,7 +242,7 @@ Ujian penuh dijalankan melalui localhost + Named Tunnel `https://lab.labsentinel
 - [x] **Named Cloudflare Tunnel**: URL tetap `lab.labsentinel.xyz` (Tunnel ID: e3992090-b77d-4b30-a943-fb74d7742a6b)
 - [x] **Deployment Package**: Folder `deploy/LabSentinel/` sedia untuk copy ke PC ujian
 - [x] **PythonAnywhere Deployment**: Server di-host ke cloud (`labsentinel.xyz`) — sentiasa online, tiada bergantung pada tunnel/captive portal
-- [x] **Setup Wizard Prerequisite Check**: Semakan automatik Python + library pada welcome step. Nasihat install jelas jika keperluan tidak dipenuhi.
+- [x] **Setup Wizard Auto-Download Python**: Wizard semak Python + library, tawar muat turun dan pasang Python 3.12 automatik jika tiada. Library juga dipasang automatik.
 
 ## Architecture
 ```
@@ -390,7 +390,7 @@ Time expires --> PC locks again (new UUID + QR generated + Matrix rain restarts)
 | 2026-02-13 | **Domain Migration**: `linuxpredator.pythonanywhere.com` → `labsentinel.xyz`. PythonAnywhere paid plan ($10/bulan). DNS CNAME via Cloudflare (DNS only). Let's Encrypt SSL auto-renew. Semua URL dalam kod dikemas kini. |
 | 2026-02-13 | **Logo pada Web Pages**: Route `/static/logo.png` ditambah. Logo LabSentinel dipaparkan di halaman login, unlock (borang pengguna), admin dashboard, dan halaman urus admin. |
 | 2026-02-13 | **EXE Rebuild + Final Deploy**: Kedua-dua EXE di-rebuild dengan semua perubahan terkini (server-side admin verify, role-based UI, delete lab, domain migration, logo). Pakej lengkap (7 fail) disalin ke `E:\Program\LabSentinel` untuk deploy manual. |
-| 2026-02-13 | **Setup Wizard Python Prerequisite Check**: Welcome step kini semak Python dan library (`requests`, `qrcode`, `pillow`) sebelum pemasangan. Papar status [OK]/[X] untuk setiap keperluan. Jika Python tiada, tunjuk amaran jelas dengan arahan install. Jika library tak cukup, tunjuk arahan `pip install`. Jika semua OK, papar mesej hijau. Bezakan nasihat antara mod EXE (Python optional tapi disyorkan) dan mod skrip (Python wajib). |
+| 2026-02-13 | **Setup Wizard Auto-Download Python**: Welcome step semak Python dan library. Jika Python tiada, tawar butang "Muat Turun & Pasang Python 3.12" — muat turun dari python.org, pasang secara automatik (silent + PATH), kemudian install library (`requests`, `qrcode`, `pillow`). Jika Python ada tapi library kurang, tawar butang install library. Progress bar ditunjukkan semasa muat turun. Halaman refresh selepas selesai. |
 | 2026-02-13 | **Fix Auto-Lock Countdown**: Countdown ditukar dari counter-based (`remaining_time -= 1`) ke **timestamp-based** (`time.time() - unlock_timestamp`). Tahan PC sleep/hibernate — masa dikira dari jam sebenar. Tambah **try-except** supaya chain `after()` tak putus jika berlaku exception. Tambah **watchdog** dalam `check_status_loop()` sebagai failsafe — semak session expired setiap 2 saat secara bebas dari countdown. |
 | 2026-02-13 | **Fix Stale URL in Deploy Package**: `INSTALL.txt` dan `config.json` dalam `deploy/LabSentinel/` masih guna URL lama `linuxpredator.pythonanywhere.com`. Dikemas kini ke `labsentinel.xyz`. Pakej di `E:\Program\LabSentinel` turut dikemas kini. |
 

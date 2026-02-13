@@ -7,6 +7,8 @@ import shutil
 import ctypes
 import winreg
 import subprocess
+import threading
+import urllib.request
 from PIL import Image, ImageTk # pip install pillow
 
 # Set AppUserModelID supaya Windows guna ikon app, bukan ikon Python
@@ -218,62 +220,125 @@ class SetupWizard(tk.Tk):
 
     # --- STEPS ---
 
-    def check_system_requirements(self):
-        """Semak Python dan library yang diperlukan pada sistem"""
-        results = {}
+    # --- PYTHON INSTALLER ---
+    PYTHON_VERSION = "3.12.9"
+    PYTHON_URL = f"https://www.python.org/ftp/python/{PYTHON_VERSION}/python-{PYTHON_VERSION}-amd64.exe"
+    PYTHON_FILENAME = f"python-{PYTHON_VERSION}-amd64.exe"
 
-        # 1. Semak Python
-        is_exe = getattr(sys, 'frozen', False)
-        python_found = False
-        python_version = ""
-        try:
-            proc = subprocess.run(
-                ["python", "--version"],
-                capture_output=True, text=True, timeout=5,
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
-            output = (proc.stdout + proc.stderr).strip()
-            if "Python" in output and "not found" not in output.lower():
-                python_found = True
-                python_version = output
-        except Exception:
-            pass
-
-        # Fallback: cuba py launcher
-        if not python_found:
+    def check_python(self):
+        """Semak sama ada Python dipasang pada sistem"""
+        for cmd in ["python", "py"]:
             try:
                 proc = subprocess.run(
-                    ["py", "--version"],
+                    [cmd, "--version"],
                     capture_output=True, text=True, timeout=5,
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
                 output = (proc.stdout + proc.stderr).strip()
-                if "Python" in output:
-                    python_found = True
-                    python_version = output
+                if "Python" in output and "not found" not in output.lower():
+                    return {'found': True, 'version': output}
             except Exception:
                 pass
+        return {'found': False, 'version': ''}
 
-        results['python'] = {'found': python_found, 'version': python_version}
-        results['is_exe'] = is_exe
-
-        # 2. Semak library (hanya jika Python dijumpai)
+    def check_libraries(self):
+        """Semak library Python yang diperlukan"""
         libs = {'requests': False, 'qrcode': False, 'pillow (PIL)': False}
-        if python_found:
-            for lib, import_name in [('requests', 'requests'), ('qrcode', 'qrcode'), ('pillow (PIL)', 'PIL')]:
+        for lib, import_name in [('requests', 'requests'), ('qrcode', 'qrcode'), ('pillow (PIL)', 'PIL')]:
+            try:
+                proc = subprocess.run(
+                    ["python", "-c", f"import {import_name}; print('OK')"],
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                if "OK" in proc.stdout:
+                    libs[lib] = True
+            except Exception:
+                pass
+        return libs
+
+    def download_and_install_python(self):
+        """Muat turun dan pasang Python secara automatik"""
+        self.btn_download_py.config(state="disabled", text="Memuat turun...")
+        self.py_progress_label.config(text="Menyambung ke python.org...")
+
+        def download_thread():
+            download_path = os.path.join(os.environ.get("TEMP", "."), self.PYTHON_FILENAME)
+            try:
+                # Muat turun dengan progress
+                req = urllib.request.urlopen(self.PYTHON_URL, timeout=30)
+                total_size = int(req.headers.get('Content-Length', 0))
+                downloaded = 0
+                chunk_size = 65536
+
+                with open(download_path, 'wb') as f:
+                    while True:
+                        chunk = req.read(chunk_size)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            pct = int(downloaded / total_size * 100)
+                            mb_done = downloaded / (1024 * 1024)
+                            mb_total = total_size / (1024 * 1024)
+                            self.root.after(0, lambda p=pct, d=mb_done, t=mb_total:
+                                self.py_progress_label.config(
+                                    text=f"Memuat turun: {p}% ({d:.1f}/{t:.1f} MB)"))
+
+                self.root.after(0, lambda: self.py_progress_label.config(
+                    text="Memasang Python (sila tunggu)..."))
+
+                # Pasang Python secara senyap dengan PATH
+                proc = subprocess.run(
+                    [download_path, "/passive", "InstallAllUsers=1",
+                     "PrependPath=1", "Include_test=0"],
+                    timeout=300
+                )
+
+                # Bersih
                 try:
-                    proc = subprocess.run(
-                        ["python", "-c", f"import {import_name}; print('OK')"],
-                        capture_output=True, text=True, timeout=5,
-                        creationflags=subprocess.CREATE_NO_WINDOW
-                    )
-                    if "OK" in proc.stdout:
-                        libs[lib] = True
+                    os.remove(download_path)
                 except Exception:
                     pass
-        results['libs'] = libs
 
-        return results
+                if proc.returncode == 0:
+                    # Pasang library
+                    self.root.after(0, lambda: self.py_progress_label.config(
+                        text="Memasang library (requests, qrcode, pillow)..."))
+                    subprocess.run(
+                        ["python", "-m", "pip", "install", "requests", "qrcode", "pillow"],
+                        capture_output=True, timeout=120,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    self.root.after(0, self.on_python_install_success)
+                else:
+                    self.root.after(0, lambda: self.on_python_install_fail(
+                        f"Installer keluar dengan kod {proc.returncode}"))
+
+            except Exception as e:
+                try:
+                    os.remove(download_path)
+                except Exception:
+                    pass
+                self.root.after(0, lambda: self.on_python_install_fail(str(e)))
+
+        threading.Thread(target=download_thread, daemon=True).start()
+
+    def on_python_install_success(self):
+        """Dipanggil selepas Python berjaya dipasang"""
+        self.py_progress_label.config(text="")
+        self.btn_download_py.pack_forget()
+        # Refresh welcome step
+        self.show_step(0)
+        messagebox.showinfo("Berjaya",
+            f"Python {self.PYTHON_VERSION} dan library berjaya dipasang!\n\n"
+            "Semua keperluan sistem telah dipenuhi.")
+
+    def on_python_install_fail(self, error):
+        """Dipanggil jika pemasangan Python gagal"""
+        self.py_progress_label.config(text=f"Gagal: {error}", fg="#dc2626")
+        self.btn_download_py.config(state="normal", text="Cuba Semula")
 
     def create_welcome_step(self):
         header = ttk.Label(self.main_area, text="Welcome to LabSentinel Setup", style="Header.TLabel")
@@ -287,17 +352,14 @@ class SetupWizard(tk.Tk):
                                    bg="white", fg="#1a3a6e", padx=15, pady=10)
         req_frame.pack(fill=tk.X, pady=(0, 10))
 
-        # Run check
-        reqs = self.check_system_requirements()
+        # Semak Python
+        py_info = self.check_python()
 
-        # Python status
-        if reqs['python']['found']:
-            py_icon = "OK"
-            py_color = "#16a34a"
-            py_text = f"Python — {reqs['python']['version']}"
+        if py_info['found']:
+            py_icon, py_color = "OK", "#16a34a"
+            py_text = f"Python — {py_info['version']}"
         else:
-            py_icon = "X"
-            py_color = "#dc2626"
+            py_icon, py_color = "X", "#dc2626"
             py_text = "Python — Tidak dijumpai"
 
         py_row = tk.Frame(req_frame, bg="white")
@@ -305,9 +367,11 @@ class SetupWizard(tk.Tk):
         tk.Label(py_row, text=f"[{py_icon}]", font=("Consolas", 10, "bold"), fg=py_color, bg="white", width=4, anchor="w").pack(side=tk.LEFT)
         tk.Label(py_row, text=py_text, font=("Segoe UI", 10), bg="white", fg="#333").pack(side=tk.LEFT)
 
-        # Library status (hanya jika Python ada)
-        if reqs['python']['found']:
-            for lib_name, installed in reqs['libs'].items():
+        # Semak library (hanya jika Python ada)
+        libs = {}
+        if py_info['found']:
+            libs = self.check_libraries()
+            for lib_name, installed in libs.items():
                 lib_row = tk.Frame(req_frame, bg="white")
                 lib_row.pack(fill=tk.X, pady=1)
                 icon = "OK" if installed else "X"
@@ -316,48 +380,71 @@ class SetupWizard(tk.Tk):
                 status_text = lib_name if installed else f"{lib_name} — Tidak dipasang"
                 tk.Label(lib_row, text=f"  {status_text}", font=("Segoe UI", 9), bg="white", fg="#555").pack(side=tk.LEFT)
 
-        # Advisory message
-        all_libs_ok = all(reqs['libs'].values()) if reqs['python']['found'] else False
+        all_libs_ok = all(libs.values()) if py_info['found'] else False
 
-        if not reqs['python']['found']:
-            # Python tidak dijumpai
+        if not py_info['found']:
+            # Python tidak dijumpai — tawar muat turun
             warn_frame = tk.Frame(req_frame, bg="#fef2f2", highlightbackground="#fecaca", highlightthickness=1)
             warn_frame.pack(fill=tk.X, pady=(10, 0))
+            tk.Label(warn_frame, text="Python diperlukan untuk menjalankan LabSentinel Client.",
+                     font=("Segoe UI", 9), bg="#fef2f2", fg="#991b1b", padx=10, pady=(8, 4)).pack(anchor="w")
 
-            if reqs['is_exe']:
-                warn_msg = (
-                    "AMARAN: Python tidak dipasang pada PC ini.\n"
-                    "LabSentinel Client.exe boleh berjalan tanpa Python, tetapi\n"
-                    "jika berlaku masalah, Python diperlukan untuk diagnosis.\n\n"
-                    "Disyorkan: Pasang Python dari python.org\n"
-                    "Pastikan tick 'Add Python to PATH' semasa install."
-                )
-            else:
-                warn_msg = (
-                    "AMARAN: Python tidak dipasang pada PC ini.\n"
-                    "LabSentinel Client TIDAK boleh berjalan tanpa Python.\n\n"
-                    "Sila pasang Python terlebih dahulu:\n"
-                    "1. Muat turun dari https://python.org/downloads\n"
-                    "2. PASTIKAN tick 'Add Python to PATH'\n"
-                    "3. Selepas install, buka PowerShell baru dan jalankan:\n"
-                    "   pip install requests qrcode pillow"
-                )
-            tk.Label(warn_frame, text=warn_msg, font=("Segoe UI", 9), bg="#fef2f2", fg="#991b1b",
-                     justify=tk.LEFT, padx=10, pady=8, wraplength=400).pack(anchor="w")
+            btn_frame = tk.Frame(warn_frame, bg="#fef2f2")
+            btn_frame.pack(fill=tk.X, padx=10, pady=(0, 8))
+
+            self.btn_download_py = tk.Button(btn_frame,
+                text=f"Muat Turun && Pasang Python {self.PYTHON_VERSION}",
+                command=self.download_and_install_python,
+                font=("Segoe UI", 10, "bold"), bg="#1a3a6e", fg="white",
+                activebackground="#2d5a9e", activeforeground="white",
+                relief="raised", padx=15, pady=6, cursor="hand2")
+            self.btn_download_py.pack(anchor="w", pady=(4, 4))
+
+            self.py_progress_label = tk.Label(btn_frame, text="", font=("Segoe UI", 8),
+                                               bg="#fef2f2", fg="#555", anchor="w")
+            self.py_progress_label.pack(anchor="w")
 
         elif not all_libs_ok:
-            # Python ada tapi library tak cukup
-            missing = [lib for lib, ok in reqs['libs'].items() if not ok]
+            # Python ada tapi library tak cukup — install automatik
+            missing = [lib for lib, ok in libs.items() if not ok]
             warn_frame = tk.Frame(req_frame, bg="#fffbeb", highlightbackground="#fef08a", highlightthickness=1)
             warn_frame.pack(fill=tk.X, pady=(10, 0))
             pip_libs = " ".join([("pillow" if "pillow" in m else m) for m in missing])
-            warn_msg = (
-                f"Library berikut belum dipasang: {', '.join(missing)}\n"
-                f"Buka PowerShell dan jalankan:\n"
-                f"  pip install {pip_libs}"
-            )
-            tk.Label(warn_frame, text=warn_msg, font=("Segoe UI", 9), bg="#fffbeb", fg="#92400e",
-                     justify=tk.LEFT, padx=10, pady=8).pack(anchor="w")
+            tk.Label(warn_frame, text=f"Library belum dipasang: {', '.join(missing)}",
+                     font=("Segoe UI", 9), bg="#fffbeb", fg="#92400e", padx=10, pady=(8, 4)).pack(anchor="w")
+
+            lib_btn_frame = tk.Frame(warn_frame, bg="#fffbeb")
+            lib_btn_frame.pack(fill=tk.X, padx=10, pady=(0, 8))
+
+            self.py_progress_label = tk.Label(lib_btn_frame, text="", font=("Segoe UI", 8),
+                                               bg="#fffbeb", fg="#555", anchor="w")
+
+            def install_libs():
+                btn_install_libs.config(state="disabled", text="Memasang...")
+                def thread():
+                    try:
+                        subprocess.run(
+                            ["python", "-m", "pip", "install", pip_libs],
+                            capture_output=True, timeout=120,
+                            creationflags=subprocess.CREATE_NO_WINDOW
+                        )
+                        self.root.after(0, lambda: [self.show_step(0),
+                            messagebox.showinfo("Berjaya", "Library berjaya dipasang!")])
+                    except Exception as e:
+                        self.root.after(0, lambda: [
+                            self.py_progress_label.config(text=f"Gagal: {e}", fg="#dc2626"),
+                            btn_install_libs.config(state="normal", text="Cuba Semula")])
+                threading.Thread(target=thread, daemon=True).start()
+
+            btn_install_libs = tk.Button(lib_btn_frame,
+                text=f"Pasang Library ({pip_libs})",
+                command=install_libs,
+                font=("Segoe UI", 9, "bold"), bg="#92400e", fg="white",
+                activebackground="#78350f", activeforeground="white",
+                relief="raised", padx=10, pady=4, cursor="hand2")
+            btn_install_libs.pack(anchor="w", pady=(4, 4))
+            self.py_progress_label.pack(anchor="w")
+
         else:
             # Semua OK
             ok_frame = tk.Frame(req_frame, bg="#f0fdf4", highlightbackground="#bbf7d0", highlightthickness=1)
