@@ -1062,6 +1062,25 @@ def admin_users():
                 print(f"[ADMIN] Labs updated for user_id={user_id} by {admin_user['username']}")
                 return redirect('/admin/users?msg=Makmal+berjaya+dikemaskini')
 
+        elif form_action == 'delete_lab':
+            lab_name = request.form.get('lab_name', '').strip()
+            if lab_name:
+                # Padam semua sesi makmal ini
+                conn.execute("DELETE FROM sessions WHERE lab_name = ?", (lab_name,))
+                # Buang makmal dari assigned_labs setiap admin
+                admins = conn.execute("SELECT id, assigned_labs FROM admin_users WHERE assigned_labs LIKE ?",
+                                      (f'%{lab_name}%',)).fetchall()
+                for adm in admins:
+                    cleaned = [l.strip() for l in adm['assigned_labs'].split(',') if l.strip() and l.strip() != lab_name]
+                    conn.execute("UPDATE admin_users SET assigned_labs = ? WHERE id = ?",
+                                (','.join(cleaned), adm['id']))
+                conn.commit()
+                conn.close()
+                print(f"[ADMIN] Lab deleted: {lab_name} by {admin_user['username']}")
+                return redirect('/admin/users?msg=Makmal+berjaya+dibuang')
+            else:
+                error = 'Nama makmal diperlukan.'
+
     # Fetch all admin users
     if not conn._check_same_thread if hasattr(conn, '_check_same_thread') else False:
         conn = get_db()
@@ -1079,6 +1098,14 @@ def admin_users():
         ORDER BY lab_name
     """).fetchall()
     all_labs = [r['lab_name'] for r in all_labs]
+
+    # Fetch lab stats untuk paparan Urus Makmal
+    lab_stats = {}
+    for lab in all_labs:
+        pc_count = conn.execute("SELECT COUNT(DISTINCT pc_hostname) FROM sessions WHERE lab_name = ?", (lab,)).fetchone()[0]
+        record_count = conn.execute("SELECT COUNT(*) FROM sessions WHERE lab_name = ? AND nama_penuh IS NOT NULL", (lab,)).fetchone()[0]
+        lab_stats[lab] = {'pc_count': pc_count, 'record_count': record_count}
+
     conn.close()
 
     html = '''
@@ -1324,6 +1351,46 @@ def admin_users():
                     </form>
                 </div>
             </div>
+
+            <!-- Urus Makmal -->
+            <div class="section">
+                <div class="section-header" style="background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);">
+                    <h2>Urus Makmal</h2>
+                </div>
+                <div class="section-body">
+                    {% if all_labs %}
+                    <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px;">Buang makmal akan <strong>memadam semua data sesi dan rekod pengguna</strong> makmal tersebut secara kekal.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama Makmal</th>
+                                <th>Jumlah PC</th>
+                                <th>Jumlah Rekod</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lab in all_labs %}
+                            <tr>
+                                <td><strong>{{ lab }}</strong></td>
+                                <td>{{ lab_stats[lab].pc_count }}</td>
+                                <td>{{ lab_stats[lab].record_count }}</td>
+                                <td>
+                                    <form method="POST" style="display:inline" onsubmit="return confirm('AMARAN: Buang makmal \'{{ lab }}\'?\n\nSemua data ({{ lab_stats[lab].pc_count }} PC, {{ lab_stats[lab].record_count }} rekod) akan dipadam secara kekal.\n\nTindakan ini TIDAK boleh dibatalkan.')">
+                                        <input type="hidden" name="form_action" value="delete_lab">
+                                        <input type="hidden" name="lab_name" value="{{ lab }}">
+                                        <button type="submit" class="btn btn-red btn-small">Buang</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color: #aaa; font-size: 0.85rem;">Tiada makmal didaftarkan lagi.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
         <script>
@@ -1344,7 +1411,7 @@ def admin_users():
     </body>
     </html>
     '''
-    return render_template_string(html, users=users, all_labs=all_labs, current_admin_id=admin_user['id'], msg=msg, error=error)
+    return render_template_string(html, users=users, all_labs=all_labs, lab_stats=lab_stats, current_admin_id=admin_user['id'], msg=msg, error=error)
 
 # ==================== HOMEPAGE ====================
 
